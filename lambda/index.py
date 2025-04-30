@@ -3,7 +3,7 @@ import json
 import os
 import boto3
 import re  # 正規表現モジュールをインポート
-import requests
+import urllib.request
 from botocore.exceptions import ClientError
 
 
@@ -17,9 +17,6 @@ def extract_region_from_arn(arn):
 
 # グローバル変数としてクライアントを初期化（初期値）
 bedrock_client = None
-
-# モデルID
-MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
 
 def lambda_handler(event, context):
     try:
@@ -44,7 +41,6 @@ def lambda_handler(event, context):
         conversation_history = body.get('conversationHistory', [])
         
         print("Processing message:", message)
-        print("Using model:", MODEL_ID)
         
         # 会話履歴を使用
         messages = conversation_history.copy()
@@ -96,17 +92,28 @@ def lambda_handler(event, context):
             segment["text"] for msg in bedrock_messages for segment in msg["content"]
         )
 
-
         url = "https://0534-35-223-26-60.ngrok-free.app/generate"
         payload = {
             "prompt": prompt_text
         }
 
-        response = requests.post(url, json=payload)
+        # JSONデータをエンコード
+        data = json.dumps(payload).encode("utf-8")
+
+        # リクエストオブジェクトを作成
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+
+        # リクエストを送信してレスポンスを取得
+        with urllib.request.urlopen(req) as res:
+            response_body = json.loads(res.read().decode("utf-8"))
 
         
         # レスポンスを解析
-        response_body = json.loads(response['body'].read())
         print("Bedrock response:", json.dumps(response_body, default=str))
         
         # 応答の検証
