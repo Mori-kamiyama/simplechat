@@ -92,7 +92,7 @@ def lambda_handler(event, context):
             segment["text"] for msg in bedrock_messages for segment in msg["content"]
         )
 
-        url = "https://0534-35-223-26-60.ngrok-free.app/generate"
+        url = "https://42ff-35-223-26-60.ngrok-free.app/generate"
         payload = {
             "prompt": prompt_text
         }
