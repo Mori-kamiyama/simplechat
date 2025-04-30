@@ -92,13 +92,14 @@ def lambda_handler(event, context):
         #     contentType="application/json"
         # )
 
-        url = "https://0534-35-223-26-60.ngrok-free.app/"
+        prompt_text = "\n".join(
+            segment["text"] for msg in bedrock_messages for segment in msg["content"]
+        )
+
+
+        url = "https://0534-35-223-26-60.ngrok-free.app/generate"
         payload = {
-            "prompt": "string",
-            "max_new_tokens": 512,
-            "do_sample": True,
-            "temperature": 0.7,
-            "top_p": 0.9
+            "prompt": prompt_text
         }
 
         response = requests.post(url, json=payload)
