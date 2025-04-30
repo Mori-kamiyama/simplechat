@@ -15,8 +15,10 @@ def extract_region_from_arn(arn):
         return match.group(1)
     return "us-east-1"  # デフォルト値
 
+
 # グローバル変数としてクライアントを初期化（初期値）
 bedrock_client = None
+
 
 def lambda_handler(event, context):
     try:
@@ -26,31 +28,31 @@ def lambda_handler(event, context):
             region = extract_region_from_arn(context.invoked_function_arn)
             bedrock_client = boto3.client('bedrock-runtime', region_name=region)
             print(f"Initialized Bedrock client in region: {region}")
-        
+
         print("Received event:", json.dumps(event))
-        
+
         # Cognitoで認証されたユーザー情報を取得
         user_info = None
         if 'requestContext' in event and 'authorizer' in event['requestContext']:
             user_info = event['requestContext']['authorizer']['claims']
             print(f"Authenticated user: {user_info.get('email') or user_info.get('cognito:username')}")
-        
+
         # リクエストボディの解析
         body = json.loads(event['body'])
         message = body['message']
         conversation_history = body.get('conversationHistory', [])
-        
+
         print("Processing message:", message)
-        
+
         # 会話履歴を使用
         messages = conversation_history.copy()
-        
+
         # ユーザーメッセージを追加
         messages.append({
             "role": "user",
             "content": message
         })
-        
+
         # Nova Liteモデル用のリクエストペイロードを構築
         # 会話履歴を含める
         bedrock_messages = []
@@ -62,7 +64,7 @@ def lambda_handler(event, context):
                 })
             elif msg["role"] == "assistant":
                 bedrock_messages.append({
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": [{"text": msg["content"]}]
                 })
 
@@ -88,13 +90,9 @@ def lambda_handler(event, context):
         #     contentType="application/json"
         # )
 
-        prompt_text = "\n".join(
-            segment["text"] for msg in bedrock_messages for segment in msg["content"]
-        )
-
         url = "https://42ff-35-223-26-60.ngrok-free.app/generate"
         payload = {
-            "prompt": prompt_text
+            "prompt": bedrock_messages
         }
 
         # JSONデータをエンコード
@@ -112,28 +110,26 @@ def lambda_handler(event, context):
         with urllib.request.urlopen(req) as res:
             response_body = json.loads(res.read().decode("utf-8"))
 
-        
         # レスポンスを解析
         print("Bedrock response:", json.dumps(response_body, default=str))
-        
+
         # アシスタントの応答を取得
         assistant_response = (
-            response_body.get("generated_text")
-            or response_body.get("output", {})
-                      .get("message", {})
-                      .get("content", [{}])[0]
-                      .get("text")
+                response_body.get("generated_text")
+                or response_body.get("output", {})
+                .get("message", {})
+                .get("content", [{}])[0]
+                .get("text")
         )
         if not assistant_response:
             raise Exception("No response content from the model")
-
 
         # アシスタントの応答を会話履歴に追加
         messages.append({
             "role": "assistant",
             "content": assistant_response
         })
-        
+
         # 成功レスポンスの返却
         return {
             "statusCode": 200,
@@ -149,10 +145,10 @@ def lambda_handler(event, context):
                 "conversationHistory": messages
             })
         }
-        
+
     except Exception as error:
         print("Error:", str(error))
-        
+
         return {
             "statusCode": 500,
             "headers": {
