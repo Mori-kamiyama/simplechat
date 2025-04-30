@@ -121,8 +121,13 @@ def lambda_handler(event, context):
             raise Exception("No response content from the model")
         
         # アシスタントの応答を取得
-        assistant_response = response_body['output']['message']['content'][0]['text']
-        
+        assistant_response = (
+            response_body.get("output", {})
+            .get("message", {})
+            .get("content", [{}])[0]
+            .get("text")
+        )
+
         # アシスタントの応答を会話履歴に追加
         messages.append({
             "role": "assistant",
