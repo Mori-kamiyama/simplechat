@@ -3,7 +3,7 @@ import json
 import os
 import boto3
 import re  # 正規表現モジュールをインポート
-import urllib.request
+import requests
 from botocore.exceptions import ClientError
 
 
@@ -93,20 +93,15 @@ def lambda_handler(event, context):
         # )
 
         url = "https://0534-35-223-26-60.ngrok-free.app/"
-        data = {
-            "prompt": bedrock_messages,
+        payload = {
+            "prompt": "string",
             "max_new_tokens": 512,
-            "do_sample": "true",
+            "do_sample": True,
             "temperature": 0.7,
             "top_p": 0.9
         }
-        headers = {
-            'Content-Type': 'application/json',
-        }
 
-        req = urllib.request.Request(url, json.dumps(data).encode(), headers)
-        with urllib.request.urlopen(req) as res:
-            response = res.read()
+        response = requests.post(url, json=payload)
 
         
         # レスポンスを解析
